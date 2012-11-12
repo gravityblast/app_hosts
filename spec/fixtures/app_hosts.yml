@@ -1,0 +1,7 @@
+hosts_file_path: /path/to/hosts
+host: www.example.com
+addresses:
+  development: 127.0.0.1
+  staging: 127.0.0.2
+  beta: 127.0.0.3
+  production: 127.0.0.4
