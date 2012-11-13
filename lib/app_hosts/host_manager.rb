@@ -30,22 +30,22 @@ module AppHosts
     
     def replace_ip host, new_ip, file_path=@file_path
       raise "You should parse original file before replacing ip address." unless @parsed
-      File.open file_path, 'w' do |file|
-        found = false
-        @lines.each do |line|
-          line = if line[:host] == host
-            found = true
-            build_line new_ip, line[:host], line[:aliases]
-          else
-            line[:text]
-          end
-          file.puts line
+      
+      buffer = ''
+      
+      found = false
+      @lines.each do |line|
+        line = if line[:host] == host
+          found = true
+          build_line new_ip, line[:host], line[:aliases]
+        else
+          line[:text]
         end
-        
-        if !found
-          file.puts build_line(new_ip, host)
-        end
+        buffer << "#{line}\n"
       end
+        
+      buffer << "#{build_line(new_ip, host)}\n" if !found
+      write_file buffer, file_path      
     end        
     
     def build_line ip, host, aliases=[]
@@ -63,7 +63,17 @@ module AppHosts
     end
     
   private
-  
+    
+    def write_file buffer, file_path
+      buffer.gsub!(/"/, '\\"')
+      buffer.gsub!(/'/){ |match| %|"'"\\'"'"|}
+      cmd = "echo"
+      if @config['use_sudo']
+        system %|sudo sh -c '#{cmd} "#{buffer}\\c" > "#{file_path}"'|
+      else
+        system %|#{cmd} -n "#{buffer}\\c" > "#{file_path}"|
+      end      
+    end
     def parse_file file_path
       each_file_line file_path do |line|        
         line_attributes = parse_line line

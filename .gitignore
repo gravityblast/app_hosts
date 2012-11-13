@@ -1,2 +1,4 @@
 .DS_Store
 app_hosts-*.gem
+config
+config/**/*

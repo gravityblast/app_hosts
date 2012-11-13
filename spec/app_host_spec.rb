@@ -36,33 +36,11 @@ describe AppHosts do
     new_ip = '127.0.0.2'
     new_line = "#{new_ip} example.com www.example.com beta.example.com"
     @manager.replace_ip_to_line(line, new_ip).should == new_line
-  end
-  
-  it 'should replace ip for specified host' do
-    tmp_path = File.dirname(__FILE__) + '/../tmp'
-    FileUtils.mkdir_p(tmp_path)
-    host = "www.example.com"
-    new_ip = '1.1.1.1'
-    original_file_path = File.dirname(__FILE__) + '/fixtures/hosts'
-    output_file_path = File.join(tmp_path, 'new_hosts.txt')
-    new_content = <<-FILE
-# first line comment
-
-#{new_ip} www.example.com example.com
-127.0.0.2 hello-example.com
-# last line comment
-FILE
-    @manager.parse original_file_path
-    @manager.replace_ip host, new_ip, output_file_path
-    File.open output_file_path, 'r' do |file|
-      file.read.should == new_content
-    end
-    FileUtils.rm_rf(tmp_path)
-  end
+  end    
   
   it 'should parse config file' do
     config = {
-      'hosts_file_path' => 'hello',
+      'hosts_file_path' => '/path/to/hosts',
       'host' => 'www.example.com',
       'addresses' => {
         'development' => '127.0.0.1',
@@ -89,11 +67,28 @@ FILE
     @manager.find_ip_by_name('undefined-name').should be_nil
   end
   
+  it 'should replace ip for specified host' do
+    tmp_path = File.dirname(__FILE__) + '/../tmp'
+    host = "www.example.com"
+    new_ip = '1.1.1.1'
+    original_file_path = File.dirname(__FILE__) + '/fixtures/hosts'
+    output_file_path = '/tmp/new_hosts.txt'
+    new_content = <<-FILE
+# first line comment
+
+#{new_ip} www.example.com example.com
+127.0.0.2 hello-example.com
+# last line comment
+FILE
+    @manager.should_receive(:write_file).with(new_content, output_file_path)
+    @manager.parse original_file_path
+    @manager.replace_ip host, new_ip, output_file_path    
+  end
+  
   it 'should replace ip for specified named host' do
     tmp_path = File.dirname(__FILE__) + '/../tmp'
-    FileUtils.mkdir_p(tmp_path)    
     original_file_path = File.dirname(__FILE__) + '/fixtures/hosts'
-    output_file_path = File.join(tmp_path, 'new_hosts.txt')
+    output_file_path = '/tmp/new_hosts.txt'
     named_host = 'production'
     new_ip = @manager.instance_variable_get('@config')['addresses']['production']
     new_content = <<-FILE
@@ -103,19 +98,14 @@ FILE
 127.0.0.2 hello-example.com
 # last line comment
 FILE
+    @manager.should_receive(:write_file).with(new_content, output_file_path)
     @manager.parse original_file_path
-    @manager.switch_ip_to named_host, output_file_path
-    File.open output_file_path, 'r' do |file|
-      file.read.should == new_content
-    end
-    FileUtils.rm_rf(tmp_path)
+    @manager.switch_ip_to named_host, output_file_path    
   end
   
   it 'should add ip and hosts if not already specified' do
-    tmp_path = File.dirname(__FILE__) + '/../tmp'
-    FileUtils.mkdir_p(tmp_path)    
     original_file_path = File.dirname(__FILE__) + '/fixtures/hosts'
-    output_file_path = File.join(tmp_path, 'new_hosts.txt')
+    output_file_path = '/tmp/new_hosts.txt'
     named_host = 'production'
     
     config = @manager.instance_variable_get('@config')
@@ -131,11 +121,8 @@ FILE
 # last line comment
 #{new_ip} new-example.com
 FILE
+    @manager.should_receive(:write_file).with(new_content, output_file_path)
     @manager.parse original_file_path
     @manager.switch_ip_to named_host, output_file_path
-    File.open output_file_path, 'r' do |file|
-      file.read.should == new_content
-    end
-    FileUtils.rm_rf(tmp_path)
   end
 end
