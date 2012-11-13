@@ -71,7 +71,7 @@ module AppHosts
       if @config['use_sudo']
         system %|sudo sh -c '#{cmd} "#{buffer}\\c" > "#{file_path}"'|
       else
-        system %|#{cmd} -n "#{buffer}\\c" > "#{file_path}"|
+        system %|#{cmd} "#{buffer}\\c" > "#{file_path}"|
       end      
     end
     def parse_file file_path
