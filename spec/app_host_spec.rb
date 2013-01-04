@@ -3,9 +3,11 @@ require File.dirname(__FILE__) + '/../lib/app_hosts'
 
 describe AppHosts do
   before(:each) do
+    AppHosts::Chef.should_receive(:configure_chef)
+    AppHosts::Chef.should_receive(:search_chef_nodes).and_return(["79.125.61.76"])
     @manager = AppHosts::HostManager.new File.dirname(__FILE__) + '/fixtures/app_hosts.yml'
   end
-  
+
   it 'should parse line' do
     line = ' 127.0.0.1 example.com www.example.com beta.example.com '
     @manager.send(:parse_line, line).should == ['127.0.0.1', {
@@ -13,12 +15,12 @@ describe AppHosts do
       :aliases => ['www.example.com', 'beta.example.com']
     }]
   end
-  
+
   it 'should not parse comments' do
     line = ' # 127.0.0.1 example.com www.example.com beta.example.com '
     @manager.send(:parse_line, line).should be_nil
-  end    
-  
+  end
+
   it 'should save file lines' do
     @manager.parse File.dirname(__FILE__) + '/fixtures/hosts'
     lines = [
@@ -30,14 +32,14 @@ describe AppHosts do
     ]
     @manager.lines.should =~ lines
   end
-  
+
   it 'should replace ip address to line' do
     line = '127.0.0.1 example.com www.example.com beta.example.com'
     new_ip = '127.0.0.2'
     new_line = "#{new_ip} example.com www.example.com beta.example.com"
     @manager.replace_ip_to_line(line, new_ip).should == new_line
-  end    
-  
+  end
+
   it 'should parse config file' do
     config = {
       'hosts_file_path' => '/path/to/hosts',
@@ -46,12 +48,13 @@ describe AppHosts do
         'development' => '127.0.0.1',
         'staging' => '127.0.0.2',
         'beta' => '127.0.0.3',
-        'production' => '127.0.0.4'
+        'production' => '127.0.0.4',
+        'chef' => '79.125.61.76'
       }
     }
     @manager.instance_variable_get('@config').should == config
   end
-  
+
   it 'should find host ip by name' do
     {
       'development' => '127.0.0.1',
@@ -62,11 +65,11 @@ describe AppHosts do
       @manager.find_ip_by_name(name).should == ip
     end
   end
-  
+
   it 'should not find undefined address' do
     @manager.find_ip_by_name('undefined-name').should be_nil
   end
-  
+
   it 'should replace ip for specified host' do
     tmp_path = File.dirname(__FILE__) + '/../tmp'
     host = "www.example.com"
@@ -82,9 +85,9 @@ describe AppHosts do
 FILE
     @manager.should_receive(:write_file).with(new_content, output_file_path)
     @manager.parse original_file_path
-    @manager.replace_ip host, new_ip, output_file_path    
+    @manager.replace_ip host, new_ip, output_file_path
   end
-  
+
   it 'should replace ip for specified named host' do
     tmp_path = File.dirname(__FILE__) + '/../tmp'
     original_file_path = File.dirname(__FILE__) + '/fixtures/hosts'
@@ -100,18 +103,18 @@ FILE
 FILE
     @manager.should_receive(:write_file).with(new_content, output_file_path)
     @manager.parse original_file_path
-    @manager.switch_ip_to named_host, output_file_path    
+    @manager.switch_ip_to named_host, output_file_path
   end
-  
+
   it 'should add ip and hosts if not already specified' do
     original_file_path = File.dirname(__FILE__) + '/fixtures/hosts'
     output_file_path = '/tmp/new_hosts.txt'
     named_host = 'production'
-    
+
     config = @manager.instance_variable_get('@config')
     config['host'] = 'new-example.com'
     @manager.instance_variable_set('@config', config)
-    
+
     new_ip = @manager.instance_variable_get('@config')['addresses']['production']
     new_content = <<-FILE
 # first line comment
