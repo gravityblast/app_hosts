@@ -5,3 +5,6 @@ addresses:
   staging: 127.0.0.2
   beta: 127.0.0.3
   production: 127.0.0.4
+  chef:
+    query: roles:vdp-web AND chef_environment:production
+    attribute: "Proc.new {|n| n['ec2']['public_ipv4']}"
